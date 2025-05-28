@@ -1,0 +1,60 @@
+server:
+  port: 8080
+
+spring:
+  application:
+    name: loan-application-service
+  threads:
+    virtual:
+      enabled: ${SPRING_THREADS_VIRTUAL_ENABLED:true}
+  profiles:
+    active: ${SPRING_PROFILES_ACTIVE:}
+  data:
+    mongodb:
+      host: ${SPRING_DATA_MONGODB_HOST:mongo}
+      port: ${SPRING_DATA_MONGODB_PORT:27017}
+      username: ${SPRING_DATA_MONGODB_USERNAME:loanuser}
+      password: ${SPRING_DATA_MONGODB_PASSWORD:loanpassword}
+      database: ${SPRING_DATA_MONGODB_DATABASE:loan_db}
+      authentication-database: admin
+    kafka:
+      bootstrap-servers: ${SPRING_KAFKA_BOOTSTRAP_SERVERS:kafka:9092}
+      producer:
+        key-serializer: org.apache.kafka.common.serialization.StringSerializer
+        value-serializer: org.springframework.kafka.support.serializer.JsonSerializer
+        properties:
+          spring.json.add.type.headers: false
+
+app:
+  kafka:
+    topics:
+      loan-application-received: LoanApplicationReceivedEventTopic
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,prometheus,loggers,metrics,beans,env,configprops
+  endpoint:
+    health:
+      show-details: always
+    prometheus:
+      enabled: true
+  tracing:
+    sampling:
+      probability: ${MANAGEMENT_TRACING_SAMPLING_PROBABILITY:1.0}
+  zipkin:
+    tracing:
+      endpoint: ${MANAGEMENT_ZIPKIN_TRACING_ENDPOINT:http://zipkin:9411/api/v2/spans}
+    sender:
+      type: web
+  metrics:
+    tags:
+      application: ${spring.application.name}
+
+logging:
+  level:
+    root: INFO
+    bank.pf: DEBUG
+  pattern:
+    level: "%5p [${spring.application.name},%X{traceId:-},%X{spanId:-},%X{parentId:-}]"

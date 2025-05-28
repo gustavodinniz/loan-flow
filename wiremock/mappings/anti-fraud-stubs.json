@@ -1,0 +1,20 @@
+{
+  "mappings": [
+    {
+      "request": {
+        "method": "POST",
+        "urlPathPattern": "/antifraud/check/.*"
+      },
+      "response": {
+        "status": 200,
+        "jsonBody": {
+          "customerId": "{{request.pathSegments.[2]}}",
+          "fraudScore": "{{randomValue type='INTEGER' lower=10 upper=900}}",
+          "recommendation": "APPROVE",
+          "assessmentId": "{{randomValue type='UUID'}}"
+        },
+        "headers": { "Content-Type": "application/json" }
+      }
+    }
+  ]
+}

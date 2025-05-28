@@ -1,0 +1,219 @@
+version: '3.8'
+
+services:
+  # --- Microsserviços da Aplicação ---
+  loan-application-app:
+    build:
+      context: ./loan-application-service
+    container_name: loan-application-container
+    ports:
+      - "8081:8080"
+    environment:
+      SPRING_APPLICATION_NAME: loan-application-service
+      SPRING_PROFILES_ACTIVE: docker
+      SPRING_DATA_MONGODB_HOST: mongo
+      SPRING_DATA_MONGODB_PORT: 27017
+      SPRING_DATA_MONGODB_USERNAME: loanuser
+      SPRING_DATA_MONGODB_PASSWORD: loanpassword
+      SPRING_DATA_MONGODB_DATABASE: loan_db
+      SPRING_KAFKA_BOOTSTRAP_SERVERS: kafka:9092
+      MANAGEMENT_TRACING_SAMPLING_PROBABILITY: 1.0
+      MANAGEMENT_ZIPKIN_TRACING_ENDPOINT: http://zipkin:9411/api/v2/spans
+      MANAGEMENT_ENDPOINTS_WEB_EXPOSURE_INCLUDE: health,info,prometheus,loggers,metrics,beans,env,configprops
+    depends_on:
+      - mongo
+      - kafka
+      - zipkin
+    networks:
+      - loan-network
+
+  credit-assessment-app:
+    build:
+      context: ./credit-assessment-service
+    container_name: credit-assessment-container
+    ports:
+      - "8082:8080"
+    environment:
+      SPRING_APPLICATION_NAME: credit-assessment-service
+      SPRING_PROFILES_ACTIVE: docker
+      SPRING_DATA_REDIS_HOST: redis
+      SPRING_DATA_REDIS_PORT: 6379
+      SPRING_DATA_REDIS_PASSWORD: loanRedisPassword
+      SPRING_KAFKA_BOOTSTRAP_SERVERS: kafka:9092
+      WIREMOCK_HOST: wiremock
+      WIREMOCK_PORT: 8080 # Porta INTERNA do WireMock
+      MANAGEMENT_TRACING_SAMPLING_PROBABILITY: 1.0
+      MANAGEMENT_ZIPKIN_TRACING_ENDPOINT: http://zipkin:9411/api/v2/spans
+      MANAGEMENT_ENDPOINTS_WEB_EXPOSURE_INCLUDE: health,info,prometheus,loggers,metrics,beans,env,configprops
+    depends_on:
+      - redis
+      - kafka
+      - wiremock
+      - zipkin
+    networks:
+      - loan-network
+
+  loan-decision-engine-app:
+    build:
+      context: ./loan-decision-engine
+    container_name: loan-decision-engine-container
+    ports:
+      - "8083:8080"
+    environment:
+      SPRING_APPLICATION_NAME: loan-decision-engine
+      SPRING_PROFILES_ACTIVE: docker
+      SPRING_KAFKA_BOOTSTRAP_SERVERS: kafka:9092
+      LOAN_APPLICATION_SERVICE_URL: http://loan-application-container:8080
+      MANAGEMENT_TRACING_SAMPLING_PROBABILITY: 1.0
+      MANAGEMENT_ZIPKIN_TRACING_ENDPOINT: http://zipkin:9411/api/v2/spans
+      MANAGEMENT_ENDPOINTS_WEB_EXPOSURE_INCLUDE: health,info,prometheus,loggers,metrics,beans,env,configprops
+    depends_on:
+      - kafka
+      - loan-application-app # Se for chamar a API dele
+      - zipkin
+    networks:
+      - loan-network
+
+  anti-fraud-app:
+    build:
+      context: ./anti-fraud-service
+    container_name: anti-fraud-container
+    # Nenhuma porta exposta ao host se for apenas consumidor Kafka, mas pode ter actuator na 8080 interna
+    environment:
+      SPRING_APPLICATION_NAME: anti-fraud-service
+      SPRING_PROFILES_ACTIVE: docker
+      SPRING_KAFKA_BOOTSTRAP_SERVERS: kafka:9092
+      MANAGEMENT_TRACING_SAMPLING_PROBABILITY: 1.0
+      MANAGEMENT_ZIPKIN_TRACING_ENDPOINT: http://zipkin:9411/api/v2/spans
+      MANAGEMENT_ENDPOINTS_WEB_EXPOSURE_INCLUDE: health,info,prometheus,loggers,metrics,beans,env,configprops
+      SERVER_PORT: 8080 # Para o Actuator funcionar via HTTP mesmo sem controllers
+    depends_on:
+      - kafka
+      - zipkin
+    networks:
+      - loan-network
+
+  contract-notification-app:
+    build:
+      context: ./contract-notification-service
+    container_name: contract-notification-container
+    environment:
+      SPRING_APPLICATION_NAME: contract-notification-service
+      SPRING_PROFILES_ACTIVE: docker
+      SPRING_KAFKA_BOOTSTRAP_SERVERS: kafka:9092
+      MANAGEMENT_TRACING_SAMPLING_PROBABILITY: 1.0
+      MANAGEMENT_ZIPKIN_TRACING_ENDPOINT: http://zipkin:9411/api/v2/spans
+      MANAGEMENT_ENDPOINTS_WEB_EXPOSURE_INCLUDE: health,info,prometheus,loggers,metrics,beans,env,configprops
+      SERVER_PORT: 8080
+    depends_on:
+      - kafka
+      - zipkin
+    networks:
+      - loan-network
+
+  # --- Serviços de Infraestrutura ---
+  mongo:
+    image: mongo:7.0
+    container_name: loan-mongo
+    ports: ["27017:27017"]
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: loanuser
+      MONGO_INITDB_ROOT_PASSWORD: loanpassword
+      MONGO_INITDB_DATABASE: loan_db
+    volumes: ["mongo_data:/data/db"]
+    networks: ["loan-network"]
+
+  redis:
+    image: redis:7.2-alpine
+    container_name: loan-redis
+    ports: ["6379:6379"]
+    command: redis-server --requirepass loanRedisPassword
+    volumes: ["redis_data:/data"]
+    networks: ["loan-network"]
+
+  zookeeper:
+    image: confluentinc/cp-zookeeper:7.5.3
+    container_name: loan-zookeeper
+    ports: ["2181:2181"]
+    environment: { ZOOKEEPER_CLIENT_PORT: 2181, ZOOKEEPER_TICK_TIME: 2000 }
+    networks: ["loan-network"]
+
+  kafka:
+    image: confluentinc/cp-kafka:7.5.3
+    container_name: loan-kafka
+    ports: ["9092:9092", "29092:29092"] # 9092 interno, 29092 externo
+    depends_on: [zookeeper]
+    environment:
+      KAFKA_BROKER_ID: 1
+      KAFKA_ZOOKEEPER_CONNECT: zookeeper:2181
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka:9092,PLAINTEXT_HOST://localhost:29092
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: PLAINTEXT:PLAINTEXT,PLAINTEXT_HOST:PLAINTEXT
+      KAFKA_INTER_BROKER_LISTENER_NAME: PLAINTEXT
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+      KAFKA_GROUP_INITIAL_REBALANCE_DELAY_MS: 0
+      KAFKA_AUTO_CREATE_TOPICS_ENABLE: "true" # Cria tópicos automaticamente
+      # KAFKA_CREATE_TOPICS: "LoanApplicationReceived:1:1,CreditAssessmentCompleted:1:1,LoanDecisionMade:1:1" # Alternativa
+    networks: ["loan-network"]
+
+  wiremock:
+    image: wiremock/wiremock:3.5.2-alpine
+    container_name: loan-wiremock
+    ports:
+      - "8089:8080" # WireMock interno na 8080, exposto na 8089 do host
+    volumes:
+      - ./wiremock/mappings:/home/wiremock/mappings
+      # - ./wiremock/__files:/home/wiremock/__files # Se precisar servir arquivos estáticos
+    command: --global-response-templating --verbose # Habilita templating e logs verbosos
+    networks: ["loan-network"]
+
+  prometheus:
+    image: prom/prometheus:v2.50.1
+    container_name: loan-prometheus
+    ports: ["9090:9090"]
+    volumes:
+      - ./prometheus-config:/etc/prometheus # Diretório para prometheus.yml
+      - prometheus_data:/prometheus
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+      - '--storage.tsdb.path=/prometheus'
+      - '--web.console.libraries=/usr/share/prometheus/console_libraries'
+      - '--web.console.templates=/usr/share/prometheus/consoles'
+      - '--web.enable-lifecycle'
+    depends_on:
+      - loan-application-app
+      - credit-assessment-app
+      - loan-decision-engine-app
+      - anti-fraud-app # Mesmo sem porta exposta, Prometheus tentará scrapear o Actuator
+      - contract-notification-app
+    networks: ["loan-network"]
+
+  grafana:
+    image: grafana/grafana:10.4.1
+    container_name: loan-grafana
+    ports: ["3000:3000"]
+    volumes:
+      - grafana_data:/var/lib/grafana
+      # Opcional: Provisionamento (ver resposta anterior)
+    environment:
+      - GF_SECURITY_ADMIN_USER=admin
+      - GF_SECURITY_ADMIN_PASSWORD=admin
+    depends_on: [prometheus]
+    networks: ["loan-network"]
+
+  zipkin:
+    image: openzipkin/zipkin:latest # Ou uma versão específica
+    container_name: loan-zipkin
+    ports:
+      - "9411:9411"
+    networks:
+      - loan-network
+
+networks:
+  loan-network:
+    driver: bridge
+
+volumes:
+  mongo_data:
+  redis_data:
+  prometheus_data:
+  grafana_data:

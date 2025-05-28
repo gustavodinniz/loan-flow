@@ -1,0 +1,38 @@
+global:
+  scrape_interval: 15s
+  evaluation_interval: 15s
+
+scrape_configs:
+  - job_name: 'loan-application-service'
+    metrics_path: '/actuator/prometheus'
+    static_configs:
+      - targets: ['loan-application-container:8080']
+
+  - job_name: 'credit-assessment-service'
+    metrics_path: '/actuator/prometheus'
+    static_configs:
+      - targets: ['credit-assessment-container:8080']
+
+  - job_name: 'loan-decision-engine'
+    metrics_path: '/actuator/prometheus'
+    static_configs:
+      - targets: ['loan-decision-engine-container:8080']
+
+  - job_name: 'anti-fraud-service'
+    metrics_path: '/actuator/prometheus'
+    static_configs:
+      - targets: ['anti-fraud-container:8080']
+
+  - job_name: 'contract-notification-service'
+    metrics_path: '/actuator/prometheus'
+    static_configs:
+      - targets: ['contract-notification-container:8080']
+
+  - job_name: 'prometheus'
+    static_configs:
+      - targets: ['localhost:9090']
+
+  # - job_name: 'wiremock'
+  #   metrics_path: '/__admin/metrics'
+  #   static_configs:
+  #     - targets: ['loan-wiremock:8080']

@@ -1,0 +1,55 @@
+server:
+  port: 8080
+
+spring:
+  application:
+    name: anti-fraud-service
+  threads:
+    virtual:
+      enabled: ${SPRING_THREADS_VIRTUAL_ENABLED:true}
+  profiles:
+    active: ${SPRING_PROFILES_ACTIVE:}
+  kafka:
+    bootstrap-servers: ${SPRING_KAFKA_BOOTSTRAP_SERVERS:kafka:9092}
+    consumer:
+      group-id: anti-fraud-group
+      auto-offset-reset: earliest
+      key-deserializer: org.apache.kafka.common.serialization.StringDeserializer
+      value-deserializer: org.springframework.kafka.support.serializer.JsonDeserializer
+      properties:
+        spring.json.trusted.packages: "bank.pf.*"
+        spring.json.use.type.headers: false
+
+app:
+  kafka:
+    topics:
+      loan-application-received: LoanApplicationReceivedEventTopic
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,prometheus,loggers,metrics,beans,env,configprops
+  endpoint:
+    health:
+      show-details: always
+    prometheus:
+      enabled: true
+  tracing:
+    sampling:
+      probability: ${MANAGEMENT_TRACING_SAMPLING_PROBABILITY:1.0}
+  zipkin:
+    tracing:
+      endpoint: ${MANAGEMENT_ZIPKIN_TRACING_ENDPOINT:http://zipkin:9411/api/v2/spans}
+    sender:
+      type: web
+  metrics:
+    tags:
+      application: ${spring.application.name}
+
+logging:
+  level:
+    root: INFO
+    bank.pf: DEBUG
+  pattern:
+    level: "%5p [${spring.application.name},%X{traceId:-},%X{spanId:-},%X{parentId:-}]"
