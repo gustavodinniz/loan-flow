@@ -10,5 +10,6 @@ public enum LoanStatus {
     CONTRACT_PENDING,
     ACTIVE,
     PAID_OFF,
+    EVENT_PUBLISHING_FAILED,
     DEFAULTED
 }

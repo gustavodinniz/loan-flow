@@ -9,6 +9,7 @@ import bank.pf.dto.response.InternalRestrictResponse;
 import bank.pf.entity.LoanApplication;
 import bank.pf.enums.LoanStatus;
 import bank.pf.exception.ApplicationNotFoundException;
+import bank.pf.exception.EventPublishingFailedException;
 import bank.pf.exception.ValidationException;
 import bank.pf.repository.LoanApplicationRepository;
 import lombok.RequiredArgsConstructor;
@@ -80,7 +81,7 @@ public class LoanApplicationService {
                     } catch (InterruptedException | ExecutionException e) {
                         log.error("Erro ao publicar evento Kafka para AppID {}: {}", event.applicationId(), e.getMessage());
                         Thread.currentThread().interrupt();
-                        throw new RuntimeException("Falha ao publicar evento Kafka", e);
+                        throw new EventPublishingFailedException("Falha ao publicar evento Kafka", e);
                     }
                 }, virtualThreadExecutor);
 
@@ -94,11 +95,10 @@ public class LoanApplicationService {
                     event.applicationId());
         } catch (InterruptedException | ExecutionException e) {
             log.error("Falha final ao publicar evento Kafka para AppID {}: {}", event.applicationId(), e.getMessage());
-            // Aqui você precisaria de uma lógica de compensação, por exemplo,
-            // marcar a solicitação no DB como "FALHA_PUBLICACAO_EVENTO" ou tentar reenviar.
-            // Por simplicidade, vamos apenas relançar a exceção.
+            savedLoan.setStatus(LoanStatus.EVENT_PUBLISHING_FAILED);
+            loanApplicationRepository.save(savedLoan);
             Thread.currentThread().interrupt();
-            throw new RuntimeException("Erro crítico ao processar a solicitação e publicar evento.", e);
+            throw new EventPublishingFailedException("Erro crítico ao processar a solicitação e publicar evento.", e);
         }
     }
 
@@ -121,7 +121,6 @@ public class LoanApplicationService {
         CompletableFuture<AccountValidationResponse> accountValidationFuture = externalValidationService.checkAccountActive(request.cpf());
         CompletableFuture<InternalRestrictResponse> restrictionFuture = externalValidationService.checkInternalRestrictions(request.cpf());
 
-        // Espera todas as validações externas completarem
         CompletableFuture.allOf(cpfValidationFuture, accountValidationFuture, restrictionFuture).join();
 
         CpfValidationResponse cpfResult = cpfValidationFuture.get();
