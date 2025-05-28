@@ -1,0 +1,14 @@
+package bank.pf.enums;
+
+public enum LoanStatus {
+
+    PENDING_VALIDATION,
+    PENDING_ASSESSMENT,
+    UNDER_MANUAL_REVIEW,
+    APPROVED,
+    REJECTED,
+    CONTRACT_PENDING,
+    ACTIVE,
+    PAID_OFF,
+    DEFAULTED
+}

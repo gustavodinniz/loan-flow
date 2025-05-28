@@ -1,0 +1,60 @@
+services:
+  # --- Serviços de Infraestrutura ---
+  mongo:
+    image: mongo:7.0
+    container_name: loan-mongo
+    ports: ["27017:27017"]
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: loanuser
+      MONGO_INITDB_ROOT_PASSWORD: loanpassword
+      MONGO_INITDB_DATABASE: loan_db
+    volumes: ["mongo_data:/data/db"]
+
+  redis:
+    image: redis:7.2-alpine
+    container_name: loan-redis
+    ports: ["6379:6379"]
+    command: redis-server --requirepass loanRedisPassword
+    volumes: ["redis_data:/data"]
+
+  zookeeper:
+    image: confluentinc/cp-zookeeper:7.5.3
+    container_name: loan-zookeeper
+    ports: ["2181:2181"]
+    environment: { ZOOKEEPER_CLIENT_PORT: 2181, ZOOKEEPER_TICK_TIME: 2000 }
+
+  kafka:
+    image: confluentinc/cp-kafka:7.5.3
+    container_name: loan-kafka
+    ports: ["9092:9092", "29092:29092"] # 9092 interno, 29092 externo
+    depends_on: [zookeeper]
+    environment:
+      KAFKA_BROKER_ID: 1
+      KAFKA_ZOOKEEPER_CONNECT: zookeeper:2181
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka:9092,PLAINTEXT_HOST://localhost:29092
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: PLAINTEXT:PLAINTEXT,PLAINTEXT_HOST:PLAINTEXT
+      KAFKA_INTER_BROKER_LISTENER_NAME: PLAINTEXT
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+      KAFKA_GROUP_INITIAL_REBALANCE_DELAY_MS: 0
+      KAFKA_AUTO_CREATE_TOPICS_ENABLE: "true" # Cria tópicos automaticamente
+      # KAFKA_CREATE_TOPICS: "LoanApplicationReceived:1:1,CreditAssessmentCompleted:1:1,LoanDecisionMade:1:1" # Alternativa
+
+  wiremock:
+    image: wiremock/wiremock:3.5.2-alpine
+    container_name: loan-wiremock
+    ports:
+      - "8089:8080" # WireMock interno na 8080, exposto na 8089 do host
+    volumes:
+      - ./wiremock/mappings:/home/wiremock/mappings
+      # - ./wiremock/__files:/home/wiremock/__files # Se precisar servir arquivos estáticos
+    command: --global-response-templating --verbose # Habilita templating e logs verbosos
+
+  zipkin:
+    image: openzipkin/zipkin:latest # Ou uma versão específica
+    container_name: loan-zipkin
+    ports:
+      - "9411:9411"
+
+volumes:
+  mongo_data:
+  redis_data:
