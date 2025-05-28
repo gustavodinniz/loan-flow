@@ -1,7 +1,7 @@
 package bank.pf.controller;
 
-import bank.pf.dto.LoanApplicationRequest;
-import bank.pf.dto.UpdateLoanStatusRequest;
+import bank.pf.dto.request.LoanApplicationRequest;
+import bank.pf.dto.request.UpdateLoanStatusRequest;
 import bank.pf.exception.ApplicationNotFoundException;
 import bank.pf.exception.ValidationException;
 import bank.pf.service.LoanApplicationService;

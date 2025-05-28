@@ -1,5 +1,6 @@
 package bank.pf.entity;
 
+import bank.pf.dto.request.LoanApplicationRequest;
 import bank.pf.enums.LoanStatus;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -14,6 +15,7 @@ import org.springframework.data.mongodb.core.mapping.Document;
 import java.math.BigDecimal;
 import java.time.Instant;
 import java.time.LocalDate;
+import java.util.UUID;
 
 @Data
 @Builder
@@ -47,4 +49,15 @@ public class LoanApplication {
 
     @LastModifiedDate
     private Instant updatedAt;
+
+    public static LoanApplication valueOf(LoanApplicationRequest request) {
+        return LoanApplication.builder()
+                .id(UUID.randomUUID().toString())
+                .cpf(request.cpf())
+                .dateOfBirth(request.dateOfBirth())
+                .amountRequested(request.amountRequested())
+                .numberOfInstallments(request.numberOfInstallments())
+                .monthlyIncome(request.monthlyIncome())
+                .build();
+    }
 }

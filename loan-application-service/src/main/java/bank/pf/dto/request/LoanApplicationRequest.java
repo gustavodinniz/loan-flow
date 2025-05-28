@@ -1,4 +1,4 @@
-package bank.pf.dto;
+package bank.pf.dto.request;
 
 import jakarta.validation.constraints.*;
 
