@@ -11,57 +11,68 @@ import org.springframework.web.bind.annotation.ExceptionHandler;
 
 import java.net.URI;
 import java.time.LocalDateTime;
-import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ExecutionException;
-import java.util.stream.Collectors;
 
 @Slf4j
 @ControllerAdvice
 public class GlobalExceptionHandler {
 
+    private ProblemDetail createProblemDetail(HttpStatus status, String type, String title, String detail, HttpServletRequest request) {
+        ProblemDetail problemDetail = ProblemDetail.forStatus(status);
+        problemDetail.setType(URI.create("https://api.bank.pf/errors/" + type));
+        problemDetail.setTitle(title);
+        problemDetail.setDetail(detail);
+        problemDetail.setInstance(URI.create(request.getRequestURI()));
+        problemDetail.setProperty("timestamp", LocalDateTime.now());
+        return problemDetail;
+    }
+
+    private ResponseEntity<ProblemDetail> createProblemResponse(HttpStatus status, String type, String title, String detail, HttpServletRequest request) {
+        return ResponseEntity.status(status).body(createProblemDetail(status, type, title, detail, request));
+    }
+
+    private ResponseEntity<ProblemDetail> createProblemResponse(HttpServletRequest request, Map<String, Object> additionalProperties) {
+        ProblemDetail problemDetail = createProblemDetail(HttpStatus.BAD_REQUEST, "validation", "Erro de validação", "A solicitação contém erros de validação", request);
+        additionalProperties.forEach(problemDetail::setProperty);
+        return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(problemDetail);
+    }
+
     @ExceptionHandler(ValidationException.class)
     public ResponseEntity<ProblemDetail> handleValidationException(ValidationException ex, HttpServletRequest request) {
         log.warn("Falha na validação da solicitação: {}", ex.getErrors());
 
-        ProblemDetail problemDetail = ProblemDetail.forStatus(HttpStatus.BAD_REQUEST);
-        problemDetail.setType(URI.create("https://api.bank.pf/errors/validation"));
-        problemDetail.setTitle("Erro de validação");
-        problemDetail.setDetail("A solicitação contém erros de validação");
-        problemDetail.setInstance(URI.create(request.getRequestURI()));
-        problemDetail.setProperty("timestamp", LocalDateTime.now());
-        problemDetail.setProperty("errors", ex.getErrors());
-
-        return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(problemDetail);
+        return createProblemResponse(
+                request,
+                Map.of("errors", ex.getErrors())
+        );
     }
 
     @ExceptionHandler(ApplicationNotFoundException.class)
     public ResponseEntity<ProblemDetail> handleApplicationNotFoundException(ApplicationNotFoundException ex, HttpServletRequest request) {
         log.warn("Solicitação não encontrada: {}", ex.getMessage());
 
-        ProblemDetail problemDetail = ProblemDetail.forStatus(HttpStatus.NOT_FOUND);
-        problemDetail.setType(URI.create("https://api.bank.pf/errors/not-found"));
-        problemDetail.setTitle("Recurso não encontrado");
-        problemDetail.setDetail(ex.getMessage());
-        problemDetail.setInstance(URI.create(request.getRequestURI()));
-        problemDetail.setProperty("timestamp", LocalDateTime.now());
-
-        return ResponseEntity.status(HttpStatus.NOT_FOUND).body(problemDetail);
+        return createProblemResponse(
+                HttpStatus.NOT_FOUND,
+                "not-found",
+                "Recurso não encontrado",
+                ex.getMessage(),
+                request
+        );
     }
 
     @ExceptionHandler(ExecutionException.class)
     public ResponseEntity<ProblemDetail> handleExecutionException(ExecutionException ex, HttpServletRequest request) {
         log.error("Erro de execução concorrente: {}", ex.getMessage());
 
-        ProblemDetail problemDetail = ProblemDetail.forStatus(HttpStatus.INTERNAL_SERVER_ERROR);
-        problemDetail.setType(URI.create("https://api.bank.pf/errors/concurrency"));
-        problemDetail.setTitle("Erro de processamento concorrente");
-        problemDetail.setDetail("Erro interno ao processar a solicitação");
-        problemDetail.setInstance(URI.create(request.getRequestURI()));
-        problemDetail.setProperty("timestamp", LocalDateTime.now());
-
-        return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(problemDetail);
+        return createProblemResponse(
+                HttpStatus.INTERNAL_SERVER_ERROR,
+                "concurrency",
+                "Erro de processamento concorrente",
+                "Erro interno ao processar a solicitação",
+                request
+        );
     }
 
     // Add a handler for thread interruption
@@ -70,28 +81,26 @@ public class GlobalExceptionHandler {
         log.error("Operação interrompida: {}", ex.getMessage());
         Thread.currentThread().interrupt(); // Restore interrupted status
 
-        ProblemDetail problemDetail = ProblemDetail.forStatus(HttpStatus.INTERNAL_SERVER_ERROR);
-        problemDetail.setType(URI.create("https://api.bank.pf/errors/interruption"));
-        problemDetail.setTitle("Operação interrompida");
-        problemDetail.setDetail("A operação foi interrompida durante o processamento");
-        problemDetail.setInstance(URI.create(request.getRequestURI()));
-        problemDetail.setProperty("timestamp", LocalDateTime.now());
-
-        return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(problemDetail);
+        return createProblemResponse(
+                HttpStatus.INTERNAL_SERVER_ERROR,
+                "interruption",
+                "Operação interrompida",
+                "A operação foi interrompida durante o processamento",
+                request
+        );
     }
 
     @ExceptionHandler(EventPublishingFailedException.class)
     public ResponseEntity<ProblemDetail> handleEventPublishingFailedException(EventPublishingFailedException ex, HttpServletRequest request) {
         log.error("Falha ao publicar evento: {}", ex.getMessage(), ex);
 
-        ProblemDetail problemDetail = ProblemDetail.forStatus(HttpStatus.INTERNAL_SERVER_ERROR);
-        problemDetail.setType(URI.create("https://api.bank.pf/errors/event-publishing"));
-        problemDetail.setTitle("Falha na publicação de evento");
-        problemDetail.setDetail("Erro crítico ao processar a solicitação e publicar evento");
-        problemDetail.setInstance(URI.create(request.getRequestURI()));
-        problemDetail.setProperty("timestamp", LocalDateTime.now());
-
-        return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(problemDetail);
+        return createProblemResponse(
+                HttpStatus.INTERNAL_SERVER_ERROR,
+                "event-publishing",
+                "Falha na publicação de evento",
+                "Erro crítico ao processar a solicitação e publicar evento",
+                request
+        );
     }
 
     @ExceptionHandler(MethodArgumentNotValidException.class)
@@ -104,28 +113,22 @@ public class GlobalExceptionHandler {
 
         log.warn("Erro de validação de argumentos: {}", errors);
 
-        ProblemDetail problemDetail = ProblemDetail.forStatus(HttpStatus.BAD_REQUEST);
-        problemDetail.setType(URI.create("https://api.bank.pf/errors/validation"));
-        problemDetail.setTitle("Erro de validação");
-        problemDetail.setDetail("A solicitação contém erros de validação");
-        problemDetail.setInstance(URI.create(request.getRequestURI()));
-        problemDetail.setProperty("timestamp", LocalDateTime.now());
-        problemDetail.setProperty("errors", errors);
-
-        return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(problemDetail);
+        return createProblemResponse(
+                request,
+                Map.of("errors", errors)
+        );
     }
 
     @ExceptionHandler(Exception.class)
     public ResponseEntity<ProblemDetail> handleGenericException(Exception ex, HttpServletRequest request) {
         log.error("Erro inesperado: {}", ex.getMessage(), ex);
 
-        ProblemDetail problemDetail = ProblemDetail.forStatus(HttpStatus.INTERNAL_SERVER_ERROR);
-        problemDetail.setType(URI.create("https://api.bank.pf/errors/internal"));
-        problemDetail.setTitle("Erro interno do servidor");
-        problemDetail.setDetail("Ocorreu um erro inesperado");
-        problemDetail.setInstance(URI.create(request.getRequestURI()));
-        problemDetail.setProperty("timestamp", LocalDateTime.now());
-
-        return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(problemDetail);
+        return createProblemResponse(
+                HttpStatus.INTERNAL_SERVER_ERROR,
+                "internal",
+                "Erro interno do servidor",
+                "Ocorreu um erro inesperado",
+                request
+        );
     }
 }
