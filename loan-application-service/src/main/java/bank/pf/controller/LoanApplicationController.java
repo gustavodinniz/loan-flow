@@ -3,7 +3,6 @@ package bank.pf.controller;
 import bank.pf.dto.request.LoanApplicationRequest;
 import bank.pf.dto.request.UpdateLoanStatusRequest;
 import bank.pf.exception.ApplicationNotFoundException;
-import bank.pf.exception.ValidationException;
 import bank.pf.service.LoanApplicationService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -15,7 +14,6 @@ import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.Map;
-import java.util.concurrent.ExecutionException;
 
 @Slf4j
 @RestController
@@ -35,7 +33,6 @@ public class LoanApplicationController {
         return ResponseEntity.status(HttpStatus.ACCEPTED).body(Map.of("applicationId", applicationId, "message", "Solicitação recebida e em processamento."));
     }
 
-    // Endpoint interno para ser chamado pelo loan-decision-engine
     @PutMapping("/internal/{applicationId}/status")
     public ResponseEntity<?> updateLoanStatus(@PathVariable String applicationId, @RequestBody UpdateLoanStatusRequest statusRequest) throws ApplicationNotFoundException {
         log.info("Recebida atualização de status para applicationId {}: {}", applicationId, statusRequest.status());

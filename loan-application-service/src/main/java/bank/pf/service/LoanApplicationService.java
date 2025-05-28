@@ -51,15 +51,6 @@ public class LoanApplicationService {
         validateMinimumIncome(request, validationErrors);
         externalValidations(request, validationErrors);
 
-        String validationOutcome;
-        switch (validationErrors.size()) {
-            case 0 -> validationOutcome = "Validação inicial bem-sucedida.";
-            case 1 -> validationOutcome = "Falha na validação inicial: " + validationErrors.getFirst();
-            default ->
-                    validationOutcome = "Múltiplas falhas na validação inicial: " + String.join(", ", validationErrors);
-        }
-
-        log.info("Resultado da validação para CPF {}: {}", request.cpf(), validationOutcome);
         if (!validationErrors.isEmpty()) {
             throw new ValidationException("Falha na validação da solicitação: " + String.join("; ", validationErrors));
         }
@@ -76,16 +67,13 @@ public class LoanApplicationService {
         CompletableFuture<SendResult<String, LoanApplicationReceivedEvent>> kafkaPublishFuture =
                 CompletableFuture.supplyAsync(() -> {
                     log.info("Thread (Kafka publish for AppID {}): {}", event.applicationId(), Thread.currentThread());
-                    try {
-                        return kafkaTemplate.send(loanApplicationReceivedTopic, event.applicationId(), event).get();
-                    } catch (InterruptedException | ExecutionException e) {
-                        log.error("Erro ao publicar evento Kafka para AppID {}: {}", event.applicationId(), e.getMessage());
-                        Thread.currentThread().interrupt();
-                        throw new EventPublishingFailedException("Falha ao publicar evento Kafka", e);
-                    }
+                    return sendToKakfaTemplate(event);
                 }, virtualThreadExecutor);
 
+        checkResultOfSending(savedLoan, kafkaPublishFuture, event);
+    }
 
+    private void checkResultOfSending(LoanApplication savedLoan, CompletableFuture<SendResult<String, LoanApplicationReceivedEvent>> kafkaPublishFuture, LoanApplicationReceivedEvent event) {
         try {
             SendResult<String, LoanApplicationReceivedEvent> sendResult = kafkaPublishFuture.get();
             log.info("Evento LoanApplicationReceivedEvent publicado no Kafka. Topic: {}, Partition: {}, Offset: {}, AppID: {}",
@@ -99,6 +87,16 @@ public class LoanApplicationService {
             loanApplicationRepository.save(savedLoan);
             Thread.currentThread().interrupt();
             throw new EventPublishingFailedException("Erro crítico ao processar a solicitação e publicar evento.", e);
+        }
+    }
+
+    private SendResult<String, LoanApplicationReceivedEvent> sendToKakfaTemplate(LoanApplicationReceivedEvent event) {
+        try {
+            return kafkaTemplate.send(loanApplicationReceivedTopic, event.applicationId(), event).get();
+        } catch (InterruptedException | ExecutionException e) {
+            log.error("Erro ao publicar evento Kafka para AppID {}: {}", event.applicationId(), e.getMessage());
+            Thread.currentThread().interrupt();
+            throw new EventPublishingFailedException("Falha ao publicar evento Kafka", e);
         }
     }
 
