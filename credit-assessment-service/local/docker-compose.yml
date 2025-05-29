@@ -1,15 +1,5 @@
 services:
   # --- Serviços de Infraestrutura ---
-  mongo:
-    image: mongo:7.0
-    container_name: loan-mongo
-    ports: [ "27017:27017" ]
-    environment:
-      MONGO_INITDB_ROOT_USERNAME: loanuser
-      MONGO_INITDB_ROOT_PASSWORD: loanpassword
-      MONGO_INITDB_DATABASE: loan_db
-    volumes: [ "mongo_data:/data/db" ]
-
   redis:
     image: redis:7.2-alpine
     container_name: loan-redis
@@ -39,21 +29,11 @@ services:
       KAFKA_AUTO_CREATE_TOPICS_ENABLE: "true" # Cria tópicos automaticamente
       # KAFKA_CREATE_TOPICS: "LoanApplicationReceived:1:1,CreditAssessmentCompleted:1:1,LoanDecisionMade:1:1" # Alternativa
 
-  wiremock-0:
+  wiremock:
     image: wiremock/wiremock:3.5.2-alpine
-    container_name: loan-wiremock-0
+    container_name: loan-wiremock
     ports:
       - "8089:8080" # WireMock interno na 8080, exposto na 8089 do host
-    volumes:
-      - ./wiremock/mappings:/home/wiremock/mappings
-      # - ./wiremock/__files:/home/wiremock/__files # Se precisar servir arquivos estáticos
-    command: --global-response-templating --verbose # Habilita templating e logs verbosos
-
-  wiremock-1:
-    image: wiremock/wiremock:3.5.2-alpine
-    container_name: loan-wiremock-1
-    ports:
-      - "8091:8080" # WireMock interno na 8080, exposto na 8089 do host
     volumes:
       - ./wiremock/mappings:/home/wiremock/mappings
       # - ./wiremock/__files:/home/wiremock/__files # Se precisar servir arquivos estáticos
@@ -66,5 +46,4 @@ services:
       - "9411:9411"
 
 volumes:
-  mongo_data:
   redis_data:
