@@ -33,6 +33,8 @@ app:
   loan-application-service:
     url: ${LOAN_APPLICATION_SERVICE_URL:http://localhost:8080}
     update-status-uri: "/api/v1/loans/internal/{applicationId}/status"
+    username: "decision_engine_user"
+    password: "internalPass"
 
 management:
   endpoints:
