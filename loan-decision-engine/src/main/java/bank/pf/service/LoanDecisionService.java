@@ -17,7 +17,6 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.retry.annotation.Backoff;
 import org.springframework.retry.annotation.Retryable;
-import org.springframework.retry.support.RetrySynchronizationManager;
 import org.springframework.stereotype.Service;
 
 import java.time.Duration;
@@ -103,6 +102,8 @@ public class LoanDecisionService {
                 .reason(decisionDetailsForUpdate)
                 .amountApproved(loanTerms != null ? loanTerms.getApprovedAmount() : null)
                 .interestRate(loanTerms != null ? loanTerms.getInterestRate() : null)
+                .installmentValue(loanTerms != null ? loanTerms.getInstallmentAmount() : null)
+                .installments(loanTerms != null ? loanTerms.getNumberOfInstallments() : null)
                 .build();
     }
 
@@ -119,12 +120,9 @@ public class LoanDecisionService {
         }
     }
 
-    // Loan terms calculation methods moved to LoanTermsCalculator
-
     @Retryable(backoff = @Backoff(delay = 1000, multiplier = 2))
     public void callUpdateLoanApplicationStatusApi(String applicationId, LoanApplicationUpdateStatusRequest updateStatusRequest) {
-        log.info("Attempting to update status for application ID {} to {} via API. Current attempt: {}",
-                applicationId, updateStatusRequest.status(), RetrySynchronizationManager.getContext().getRetryCount() + 1);
+        log.info("Attempting to update status for application ID {} to {} via API.", applicationId, updateStatusRequest.status());
         loanApplicationClient.updateLoanApplicationStatus(applicationId, updateStatusRequest);
     }
 }
