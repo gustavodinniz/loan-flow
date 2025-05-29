@@ -21,7 +21,7 @@ public class BureauService {
     private final WireMockSetupConfig wireMockSetupConfig;
     private final RedisTemplate<String, BureauScore> bureauScoreRedisTemplate;
     private static final String BUREAU_SCORE_CACHE_PREFIX = "bureauScore:";
-    private static final long CACHE_TTL_HOURS = 24;
+    private static final long CACHE_TTL_SECONDS = 24;
 
     public BureauScore getScore(String cpf) {
         log.info("WiremockBureauService.getScore called with cpf: {}", cpf);
@@ -64,7 +64,7 @@ public class BureauService {
 
     private void savingBureauScoreInCache(String cpf, String cacheKey, BureauScore score) {
         try {
-            bureauScoreRedisTemplate.opsForValue().set(cacheKey, score, CACHE_TTL_HOURS, TimeUnit.HOURS);
+            bureauScoreRedisTemplate.opsForValue().set(cacheKey, score, CACHE_TTL_SECONDS, TimeUnit.SECONDS);
             log.info("Bureau score for CPF {} saved to cache.", cpf);
         } catch (Exception e) {
             log.warn("Error saving bureau score to Redis cache (CPF: {}): {}", cpf, e.getMessage());
