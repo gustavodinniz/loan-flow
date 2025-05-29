@@ -1,6 +1,5 @@
 package bank.pf.config;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
 import com.github.tomakehurst.wiremock.WireMockServer;
 import com.github.tomakehurst.wiremock.client.WireMock;
 import jakarta.annotation.PostConstruct;
@@ -46,7 +45,7 @@ public class WireMockSetupConfig {
                         .withStatus(HttpStatus.OK.value()).withHeader("Content-Type", MediaType.APPLICATION_JSON_VALUE)
                         .withBody("""
                                 {
-                                  "cpf": "{{jsonPath request.body '$.cpf'}}",
+                                  "cpf": "{{request.pathSegments.[3]}}",
                                   "score": 900,
                                   "assessment": "HIGH_RISK",
                                   "hasRestrictions": true,
@@ -62,7 +61,7 @@ public class WireMockSetupConfig {
                         .withStatus(HttpStatus.OK.value()).withHeader("Content-Type", MediaType.APPLICATION_JSON_VALUE)
                         .withBody("""
                                 {
-                                  "cpf": "{{jsonPath request.body '$.cpf'}}",
+                                  "cpf": "{{request.pathSegments.[3]}}",
                                   "score": 400,
                                   "assessment": "MEDIUM_RISK",
                                   "hasRestrictions": false,
@@ -78,7 +77,7 @@ public class WireMockSetupConfig {
                         .withStatus(HttpStatus.OK.value()).withHeader("Content-Type", MediaType.APPLICATION_JSON_VALUE)
                         .withBody("""
                                 {
-                                  "cpf": "{{jsonPath request.body '$.cpf'}}",
+                                  "cpf": "{{request.pathSegments.[3]}}",
                                   "score": 900,
                                   "assessment": "LOW_RISK",
                                   "hasRestrictions": false,
