@@ -6,6 +6,7 @@ import bank.pf.entity.AntiFraudScore;
 import bank.pf.entity.BureauScore;
 import bank.pf.entity.CreditAssessmentResult;
 import bank.pf.enums.AssessmentStatus;
+import bank.pf.exception.*;
 import bank.pf.messaging.producer.CreditAssessmentEventProducer;
 import bank.pf.service.chain.AssessmentRuleExecutor;
 import bank.pf.service.external.AntiFraudService;
@@ -16,7 +17,6 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
 
 import java.util.List;
-import java.util.Optional;
 
 @Slf4j
 @Component
@@ -40,6 +40,7 @@ public class CreditAssessmentService {
 
         var creditAssessmentResult = buildCreditAssessmentResult(loanApplicationReceivedEvent, bureauScore);
 
+        assessmentRuleExecutor.buildRuleChain();
         assessmentRuleExecutor.executeChain(loanApplicationReceivedEvent, bureauScore, antiFraudScore, creditAssessmentResult);
         handleRiskStrategies(loanApplicationReceivedEvent, creditAssessmentResult, bureauScore);
 
@@ -51,43 +52,45 @@ public class CreditAssessmentService {
     }
 
     private BureauScore handleBureauScore(LoanApplicationReceivedEvent loanApplicationReceivedEvent) {
-        Optional<BureauScore> bureauScoreOpt = bureauService.getScore(loanApplicationReceivedEvent.cpf());
-        if (bureauScoreOpt.isEmpty()) {
-            log.warn("Could not retrieve bureau score for CPF: {}. Assessment cannot proceed.", loanApplicationReceivedEvent.cpf());
+        try {
+            BureauScore bureauScore = bureauService.getScore(loanApplicationReceivedEvent.cpf());
+            log.info("Bureau score for application {}: {}", loanApplicationReceivedEvent.applicationId(), bureauScore);
+            return bureauScore;
+        } catch (BureauNullResponseException | BureauNotFoundException | BureauApiException e) {
+            log.warn("Could not retrieve bureau score for CPF: {}. Assessment cannot proceed. Reason: {}",
+                    loanApplicationReceivedEvent.cpf(), e.getMessage());
             CreditAssessmentResult failedResult = CreditAssessmentResult.builder()
                     .applicationId(loanApplicationReceivedEvent.applicationId())
                     .cpf(loanApplicationReceivedEvent.cpf())
                     .status(AssessmentStatus.FAILED)
-                    .justification("Failed to retrieve bureau score.")
+                    .justification("Failed to retrieve bureau score: " + e.getMessage())
                     .build();
             var failedEvent = CreditAssessmentCompletedEvent.valueOf(failedResult);
             creditAssessmentEventProducer.sendCreditAssessmentCompletedEvent(failedEvent);
             log.warn("Credit assessment for application {} rejected due to bureau score failure.", loanApplicationReceivedEvent.applicationId());
             return null;
         }
-        var bureauScore = bureauScoreOpt.get();
-        log.info("Bureau score for application {}: {}", loanApplicationReceivedEvent.applicationId(), bureauScore);
-        return bureauScore;
     }
 
     private AntiFraudScore handleAntiFraudScore(LoanApplicationReceivedEvent loanApplicationReceivedEvent) {
-        Optional<AntiFraudScore> antiFraudScoreOpt = antiFraudService.checkFraud(loanApplicationReceivedEvent);
-        if (antiFraudScoreOpt.isEmpty()) {
-            log.warn("Could not retrieve anti-fraud score for application ID: {}. Assessment cannot proceed.", loanApplicationReceivedEvent.applicationId());
+        try {
+            AntiFraudScore antiFraudScore = antiFraudService.checkFraud(loanApplicationReceivedEvent);
+            log.info("Anti-fraud score for application {}: {}", loanApplicationReceivedEvent.applicationId(), antiFraudScore);
+            return antiFraudScore;
+        } catch (AntiFraudNullResponseException | AntiFraudApiException e) {
+            log.warn("Could not retrieve anti-fraud score for application ID: {}. Assessment cannot proceed. Reason: {}",
+                    loanApplicationReceivedEvent.applicationId(), e.getMessage());
             CreditAssessmentResult failedResult = CreditAssessmentResult.builder()
                     .applicationId(loanApplicationReceivedEvent.applicationId())
                     .cpf(loanApplicationReceivedEvent.cpf())
                     .status(AssessmentStatus.FAILED)
-                    .justification("Failed to retrieve anti-fraud score.")
+                    .justification("Failed to retrieve anti-fraud score: " + e.getMessage())
                     .build();
             var failedEvent = CreditAssessmentCompletedEvent.valueOf(failedResult);
             creditAssessmentEventProducer.sendCreditAssessmentCompletedEvent(failedEvent);
             log.warn("Credit assessment for application {} rejected due to anti-fraud score failure.", loanApplicationReceivedEvent.applicationId());
             return null;
         }
-        var antiFraudScore = antiFraudScoreOpt.get();
-        log.info("Anti-fraud score for application {}: {}", loanApplicationReceivedEvent.applicationId(), antiFraudScore);
-        return antiFraudScore;
     }
 
     private static CreditAssessmentResult buildCreditAssessmentResult(LoanApplicationReceivedEvent loanApplicationReceivedEvent, BureauScore bureauScore) {

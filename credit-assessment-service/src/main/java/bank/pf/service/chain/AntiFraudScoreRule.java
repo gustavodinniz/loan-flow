@@ -7,9 +7,11 @@ import bank.pf.entity.BureauScore;
 import bank.pf.entity.CreditAssessmentResult;
 import bank.pf.enums.AssessmentStatus;
 import bank.pf.enums.RecommendationType;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.core.annotation.Order;
 import org.springframework.stereotype.Component;
 
+@Slf4j
 @Component
 @Order(40)
 public class AntiFraudScoreRule extends AbstractAssessmentRule {

@@ -2,6 +2,9 @@ package bank.pf.service.external;
 
 import bank.pf.config.WireMockSetupConfig;
 import bank.pf.entity.BureauScore;
+import bank.pf.exception.BureauApiException;
+import bank.pf.exception.BureauNotFoundException;
+import bank.pf.exception.BureauNullResponseException;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.redis.core.RedisTemplate;
@@ -21,7 +24,7 @@ public class BureauService {
     private static final String BUREAU_SCORE_CACHE_PREFIX = "bureauScore:";
     private static final long CACHE_TTL_HOURS = 24;
 
-    public Optional<BureauScore> getScore(String cpf) {
+    public BureauScore getScore(String cpf) {
         log.info("WiremockBureauService.getScore called with cpf: {}", cpf);
         String cacheKey = BUREAU_SCORE_CACHE_PREFIX + cpf;
 
@@ -29,7 +32,7 @@ public class BureauService {
             var cachedScore = bureauScoreRedisTemplate.opsForValue().get(cacheKey);
             if (cachedScore != null) {
                 log.info("Bureau score for CPF {} found in cache.", cpf);
-                return Optional.of(cachedScore);
+                return cachedScore;
             }
         } catch (Exception e) {
             log.warn("Error accessing Redis cache for bureau score (CPF: {}): {}", cpf, e.getMessage());
@@ -45,15 +48,18 @@ public class BureauService {
             if (score != null) {
                 log.info("Successfully fetched bureau score for CPF {}: {}", cpf, score);
                 savingBureauScoreInCache(cpf, cacheKey, score);
-                return Optional.of(score);
+                return score;
             }
-            return Optional.empty();
+            throw new BureauNullResponseException(cpf);
+        } catch (BureauNullResponseException e) {
+            log.error("Received null response from bureau service for CPF {}: {}", cpf, e.getMessage());
+            throw e;
         } catch (HttpClientErrorException.NotFound e) {
             log.warn("Bureau score not found for CPF {}: {}", cpf, e.getStatusCode());
-            return Optional.empty();
+            throw new BureauNotFoundException(cpf, e);
         } catch (Exception e) {
             log.error("Error fetching bureau score for CPF {}: {}", cpf, e.getMessage(), e);
-            return Optional.empty();
+            throw new BureauApiException(cpf, e);
         }
     }
 

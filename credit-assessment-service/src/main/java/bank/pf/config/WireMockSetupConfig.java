@@ -1,10 +1,8 @@
 package bank.pf.config;
 
-import bank.pf.entity.AntiFraudScore;
 import bank.pf.entity.BureauScore;
 import bank.pf.enums.AssessmentType;
 import bank.pf.enums.PaymentHistoryType;
-import bank.pf.enums.RecommendationType;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.github.tomakehurst.wiremock.WireMockServer;
@@ -20,7 +18,6 @@ import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestClient;
 
 import java.math.BigDecimal;
-import java.util.UUID;
 
 @Slf4j
 @Service
@@ -75,30 +72,47 @@ public class WireMockSetupConfig {
     }
 
     private void setupAntiFraudScore(WireMockServer wireMockServer) {
-        try {
-            wireMockServer.stubFor(WireMock.post(WireMock.urlEqualTo("/api/antifraud/check"))
-                    .withRequestBody(WireMock.matchingJsonPath("$.cpf", WireMock.matching(".*03$")))
-                    .atPriority(1)
-                    .willReturn(WireMock.aResponse()
-                            .withStatus(HttpStatus.OK.value()).withHeader("Content-Type", MediaType.APPLICATION_JSON_VALUE)
-                            .withBody(objectMapper.writeValueAsString(new AntiFraudScore(UUID.randomUUID().toString(), 100, RecommendationType.REJECT)))));
+        wireMockServer.stubFor(WireMock.post(WireMock.urlEqualTo("/api/antifraud/check"))
+                .withRequestBody(WireMock.matchingJsonPath("$.cpf", WireMock.matching(".*03$")))
+                .atPriority(1)
+                .willReturn(WireMock.aResponse()
+                        .withStatus(HttpStatus.OK.value()).withHeader("Content-Type", MediaType.APPLICATION_JSON_VALUE)
+                        .withBody("""
+                                {
+                                  "applicationId": "{{jsonPath request.body '$.applicationId'}}",
+                                  "fraudScore": 900,
+                                  "recommendation": "REJECT"
+                                }
+                                """)
+                        .withTransformers("response-template")));
 
-            wireMockServer.stubFor(WireMock.post(WireMock.urlEqualTo("/api/antifraud/check"))
-                    .withRequestBody(WireMock.matchingJsonPath("$.cpf", WireMock.matching(".*04$")))
-                    .atPriority(2)
-                    .willReturn(WireMock.aResponse()
-                            .withStatus(HttpStatus.OK.value()).withHeader("Content-Type", MediaType.APPLICATION_JSON_VALUE)
-                            .withBody(objectMapper.writeValueAsString(new AntiFraudScore(UUID.randomUUID().toString(), 400, RecommendationType.MANUAL_REVIEW)))));
+        wireMockServer.stubFor(WireMock.post(WireMock.urlEqualTo("/api/antifraud/check"))
+                .withRequestBody(WireMock.matchingJsonPath("$.cpf", WireMock.matching(".*04$")))
+                .atPriority(2)
+                .willReturn(WireMock.aResponse()
+                        .withStatus(HttpStatus.OK.value()).withHeader("Content-Type", MediaType.APPLICATION_JSON_VALUE)
+                        .withBody("""
+                                {
+                                  "applicationId": "{{jsonPath request.body '$.applicationId'}}",
+                                  "fraudScore": 400,
+                                  "recommendation": "MANUAL_REVIEW"
+                                }
+                                """)
+                        .withTransformers("response-template")));
 
-            wireMockServer.stubFor(WireMock.post(WireMock.urlEqualTo("/api/antifraud/check"))
-                    .withRequestBody(WireMock.matchingJsonPath("$.cpf"))
-                    .atPriority(3)
-                    .willReturn(WireMock.aResponse()
-                            .withStatus(HttpStatus.OK.value()).withHeader("Content-Type", MediaType.APPLICATION_JSON_VALUE)
-                            .withBody(objectMapper.writeValueAsString(new AntiFraudScore(UUID.randomUUID().toString(), 900, RecommendationType.ACCEPT)))));
-        } catch (JsonProcessingException e) {
-            log.error("Error setting up AntiFraudStub", e);
-        }
+        wireMockServer.stubFor(WireMock.post(WireMock.urlEqualTo("/api/antifraud/check"))
+                .withRequestBody(WireMock.matchingJsonPath("$.cpf"))
+                .atPriority(3)
+                .willReturn(WireMock.aResponse()
+                        .withStatus(HttpStatus.OK.value()).withHeader("Content-Type", MediaType.APPLICATION_JSON_VALUE)
+                        .withBody("""
+                                {
+                                  "applicationId": "{{jsonPath request.body '$.applicationId'}}",
+                                  "fraudScore": 100,
+                                  "recommendation": "ACCEPT"
+                                }
+                                """)
+                        .withTransformers("response-template")));
 
     }
 }

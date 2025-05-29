@@ -16,7 +16,7 @@ public class AssessmentRuleExecutor {
     private final List<AssessmentRule> assessmentRules;
     private AssessmentRule firstRule;
 
-    private void buildRuleChain() {
+    public void buildRuleChain() {
         if (this.assessmentRules == null || this.assessmentRules.isEmpty()) {
             this.firstRule = null;
             return;

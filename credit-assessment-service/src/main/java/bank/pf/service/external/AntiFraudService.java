@@ -4,11 +4,11 @@ import bank.pf.config.WireMockSetupConfig;
 import bank.pf.dto.event.LoanApplicationReceivedEvent;
 import bank.pf.dto.request.AntiFraudScoreRequest;
 import bank.pf.entity.AntiFraudScore;
+import bank.pf.exception.AntiFraudApiException;
+import bank.pf.exception.AntiFraudNullResponseException;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
-
-import java.util.Optional;
 
 @Slf4j
 @Service
@@ -17,11 +17,10 @@ public class AntiFraudService {
 
     private final WireMockSetupConfig wireMockSetupConfig;
 
-    public Optional<AntiFraudScore> checkFraud(LoanApplicationReceivedEvent applicationData) {
-        log.info("Checking fraud for application ID: {}", applicationData.applicationId());
-        var antiFraudScoreRequest = AntiFraudScoreRequest.valueOf(applicationData);
-
+    public AntiFraudScore checkFraud(LoanApplicationReceivedEvent applicationData) {
         try {
+            log.info("Checking fraud for application ID: {}", applicationData.applicationId());
+            var antiFraudScoreRequest = AntiFraudScoreRequest.valueOf(applicationData);
             var antiFraudScore = wireMockSetupConfig.getRestClient().post()
                     .uri("/api/antifraud/check")
                     .body(antiFraudScoreRequest)
@@ -30,12 +29,16 @@ public class AntiFraudService {
 
             if (antiFraudScore != null) {
                 log.info("Successfully received anti-fraud antiFraudScore for application ID {}: {}", applicationData.applicationId(), antiFraudScore);
-                return Optional.of(antiFraudScore);
+                return antiFraudScore;
             }
-            return Optional.empty();
+
+            throw new AntiFraudNullResponseException(applicationData.applicationId());
+        } catch (AntiFraudNullResponseException e) {
+            log.error("Received null response from anti-fraud service for application ID {}: {}", applicationData.applicationId(), e.getMessage());
+            throw e;
         } catch (Exception e) {
             log.error("Error during anti-fraud check for application ID {}: {}", applicationData.applicationId(), e.getMessage(), e);
-            return Optional.empty();
+            throw new AntiFraudApiException(applicationData.applicationId(), e);
         }
     }
 

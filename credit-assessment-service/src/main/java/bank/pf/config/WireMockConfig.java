@@ -2,6 +2,7 @@ package bank.pf.config;
 
 import com.github.tomakehurst.wiremock.WireMockServer;
 import com.github.tomakehurst.wiremock.core.WireMockConfiguration;
+import com.github.tomakehurst.wiremock.extension.responsetemplating.ResponseTemplateTransformer;
 import jakarta.annotation.PostConstruct;
 import jakarta.annotation.PreDestroy;
 import lombok.Getter;
@@ -22,7 +23,9 @@ public class WireMockConfig {
 
     @PostConstruct
     public void startServer() {
-        wireMockServer = new WireMockServer(WireMockConfiguration.options().port(port));
+        wireMockServer = new WireMockServer(WireMockConfiguration.options()
+                .port(port)
+                .extensions(new ResponseTemplateTransformer(true)));
         wireMockServer.start();
         log.info("WireMock server started on port {}", port);
     }
