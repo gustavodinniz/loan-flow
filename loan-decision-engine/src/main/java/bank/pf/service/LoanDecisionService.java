@@ -120,9 +120,7 @@ public class LoanDecisionService {
         }
     }
 
-    @Retryable(backoff = @Backoff(delay = 1000, multiplier = 2))
     public void callUpdateLoanApplicationStatusApi(String applicationId, LoanApplicationUpdateStatusRequest updateStatusRequest) {
-        log.info("Attempting to update status for application ID {} to {} via API.", applicationId, updateStatusRequest.status());
         loanApplicationClient.updateLoanApplicationStatus(applicationId, updateStatusRequest);
     }
 }
