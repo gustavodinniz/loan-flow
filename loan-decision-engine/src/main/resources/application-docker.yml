@@ -1,0 +1,15 @@
+server:
+  port: 8080
+
+spring:
+  kafka:
+    bootstrap-servers: ${SPRING_KAFKA_BOOTSTRAP_SERVERS:kafka:9092}
+
+app:
+  loan-application-service:
+    url: ${LOAN_APPLICATION_SERVICE_URL:http://loan-application-container:8080}
+
+management:
+  zipkin:
+    tracing:
+      endpoint: ${MANAGEMENT_ZIPKIN_TRACING_ENDPOINT:http://zipkin:9411/api/v2/spans}
