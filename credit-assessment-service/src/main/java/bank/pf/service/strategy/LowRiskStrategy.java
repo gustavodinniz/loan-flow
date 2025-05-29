@@ -12,7 +12,7 @@ import java.math.RoundingMode;
 public class LowRiskStrategy implements CreditRiskStrategy {
 
     private static final BigDecimal MAX_LOAN_AMOUNT_CAP = new BigDecimal("5000000.00");
-    private static final BigDecimal INCOME_MULTIPLIER = new BigDecimal("3.0");
+    private static final BigDecimal INCOME_MULTIPLIER = new BigDecimal("4.5");
     private static final BigDecimal INTEREST_RATE = new BigDecimal("0.08");
 
     @Override

@@ -11,7 +11,6 @@ import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.HttpClientErrorException;
 
-import java.util.Optional;
 import java.util.concurrent.TimeUnit;
 
 @Slf4j
@@ -40,7 +39,7 @@ public class BureauService {
 
         log.info("Fetching bureau score for CPF {} from external service.", cpf);
         try {
-            BureauScore score = wireMockSetupConfig.getRestClient().get()
+            var score = wireMockSetupConfig.getRestClient().get()
                     .uri("/api/bureau/score/{cpf}", cpf)
                     .retrieve()
                     .body(BureauScore.class);

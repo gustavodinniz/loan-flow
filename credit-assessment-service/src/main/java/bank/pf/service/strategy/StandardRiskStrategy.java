@@ -11,8 +11,8 @@ import java.math.RoundingMode;
 @Component("standardRiskStrategy")
 public class StandardRiskStrategy implements CreditRiskStrategy {
 
-    private static final BigDecimal MAX_LOAN_AMOUNT_CAP = new BigDecimal("5000000.00");
-    private static final BigDecimal INCOME_MULTIPLIER = new BigDecimal("2.5"); // Multiplicador menor para risco padrão
+    private static final BigDecimal MAX_LOAN_AMOUNT_CAP = new BigDecimal("3000000.00");
+    private static final BigDecimal INCOME_MULTIPLIER = new BigDecimal("3.0"); // Multiplicador menor para risco padrão
     private static final BigDecimal INTEREST_RATE = new BigDecimal("0.12"); // Taxa anual para risco padrão (ex: 12%)
 
     @Override

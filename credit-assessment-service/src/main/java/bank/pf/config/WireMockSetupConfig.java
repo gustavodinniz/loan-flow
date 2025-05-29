@@ -1,9 +1,5 @@
 package bank.pf.config;
 
-import bank.pf.entity.BureauScore;
-import bank.pf.enums.AssessmentType;
-import bank.pf.enums.PaymentHistoryType;
-import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.github.tomakehurst.wiremock.WireMockServer;
 import com.github.tomakehurst.wiremock.client.WireMock;
@@ -16,8 +12,6 @@ import org.springframework.http.MediaType;
 import org.springframework.http.client.SimpleClientHttpRequestFactory;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestClient;
-
-import java.math.BigDecimal;
 
 @Slf4j
 @Service
@@ -47,28 +41,54 @@ public class WireMockSetupConfig {
     }
 
     private void setupBureauScore(WireMockServer wireMockServer) {
-        try {
-            wireMockServer.stubFor(WireMock.get(WireMock.urlMatching("/api/bureau/score/.*00"))
-                    .atPriority(1)
-                    .willReturn(WireMock.aResponse()
-                            .withStatus(HttpStatus.OK.value()).withHeader("Content-Type", MediaType.APPLICATION_JSON_VALUE)
-                            .withBody(objectMapper.writeValueAsString(new BureauScore("", 100, AssessmentType.HIGH_RISK, true, PaymentHistoryType.POOR_OVERDUE_60_DAYS, BigDecimal.valueOf(1000))))));
+        wireMockServer.stubFor(WireMock.get(WireMock.urlMatching("/api/bureau/score/.*00"))
+                .atPriority(1)
+                .willReturn(WireMock.aResponse()
+                        .withStatus(HttpStatus.OK.value()).withHeader("Content-Type", MediaType.APPLICATION_JSON_VALUE)
+                        .withBody("""
+                                {
+                                  "cpf": "{{jsonPath request.body '$.cpf'}}",
+                                  "score": 900,
+                                  "assessment": "HIGH_RISK",
+                                  "hasRestrictions": true,
+                                  "paymentHistory": "POOR_OVERDUE_60_DAYS",
+                                  "monthlyDebts": 1000.00
+                                }
+                                """)
+                        .withTransformers("response-template")));
 
-            wireMockServer.stubFor(WireMock.get(WireMock.urlMatching("/api/bureau/score/.*01"))
-                    .atPriority(2)
-                    .willReturn(WireMock.aResponse()
-                            .withStatus(HttpStatus.OK.value()).withHeader("Content-Type", MediaType.APPLICATION_JSON_VALUE)
-                            .withBody(objectMapper.writeValueAsString(new BureauScore("", 400, AssessmentType.MEDIUM_RISK, false, PaymentHistoryType.GOOD, BigDecimal.valueOf(500))))));
+        wireMockServer.stubFor(WireMock.get(WireMock.urlMatching("/api/bureau/score/.*01"))
+                .atPriority(2)
+                .willReturn(WireMock.aResponse()
+                        .withStatus(HttpStatus.OK.value()).withHeader("Content-Type", MediaType.APPLICATION_JSON_VALUE)
+                        .withBody("""
+                                {
+                                  "cpf": "{{jsonPath request.body '$.cpf'}}",
+                                  "score": 400,
+                                  "assessment": "MEDIUM_RISK",
+                                  "hasRestrictions": false,
+                                  "paymentHistory": "GOOD",
+                                  "monthlyDebts": 500.00
+                                }
+                                """)
+                        .withTransformers("response-template")));
 
-            wireMockServer.stubFor(WireMock.get(WireMock.urlMatching("/api/bureau/score/.*"))
-                    .atPriority(3)
-                    .willReturn(WireMock.aResponse()
-                            .withStatus(HttpStatus.OK.value()).withHeader("Content-Type", MediaType.APPLICATION_JSON_VALUE)
-                            .withBody(objectMapper.writeValueAsString(new BureauScore("", 900, AssessmentType.LOW_RISK, false, PaymentHistoryType.EXCELLENT, BigDecimal.ZERO)))));
+        wireMockServer.stubFor(WireMock.get(WireMock.urlMatching("/api/bureau/score/.*"))
+                .atPriority(3)
+                .willReturn(WireMock.aResponse()
+                        .withStatus(HttpStatus.OK.value()).withHeader("Content-Type", MediaType.APPLICATION_JSON_VALUE)
+                        .withBody("""
+                                {
+                                  "cpf": "{{jsonPath request.body '$.cpf'}}",
+                                  "score": 900,
+                                  "assessment": "LOW_RISK",
+                                  "hasRestrictions": false,
+                                  "paymentHistory": "EXCELLENT",
+                                  "monthlyDebts": 0
+                                }
+                                """)
+                        .withTransformers("response-template")));
 
-        } catch (JsonProcessingException e) {
-            log.error("Error setting up BureauScoreStub", e);
-        }
     }
 
     private void setupAntiFraudScore(WireMockServer wireMockServer) {
