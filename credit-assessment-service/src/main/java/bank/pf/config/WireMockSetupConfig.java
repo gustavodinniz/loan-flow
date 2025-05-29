@@ -19,7 +19,6 @@ import org.springframework.web.client.RestClient;
 public class WireMockSetupConfig {
 
     private final WireMockConfig wireMockConfig;
-    private final ObjectMapper objectMapper = new ObjectMapper();
 
     @Getter
     private String baseUrl;
