@@ -26,14 +26,13 @@ public class BureauService {
         String cacheKey = BUREAU_SCORE_CACHE_PREFIX + cpf;
 
         try {
-            BureauScore cachedScore = bureauScoreRedisTemplate.opsForValue().get(cacheKey);
+            var cachedScore = bureauScoreRedisTemplate.opsForValue().get(cacheKey);
             if (cachedScore != null) {
                 log.info("Bureau score for CPF {} found in cache.", cpf);
                 return Optional.of(cachedScore);
             }
         } catch (Exception e) {
             log.warn("Error accessing Redis cache for bureau score (CPF: {}): {}", cpf, e.getMessage());
-            // Prosseguir para buscar externamente em caso de erro no cache
         }
 
         log.info("Fetching bureau score for CPF {} from external service.", cpf);
@@ -45,12 +44,7 @@ public class BureauService {
 
             if (score != null) {
                 log.info("Successfully fetched bureau score for CPF {}: {}", cpf, score);
-                try {
-                    bureauScoreRedisTemplate.opsForValue().set(cacheKey, score, CACHE_TTL_HOURS, TimeUnit.HOURS);
-                    log.info("Bureau score for CPF {} saved to cache.", cpf);
-                } catch (Exception e) {
-                    log.warn("Error saving bureau score to Redis cache (CPF: {}): {}", cpf, e.getMessage());
-                }
+                savingBureauScoreInCache(cpf, cacheKey, score);
                 return Optional.of(score);
             }
             return Optional.empty();
@@ -59,7 +53,16 @@ public class BureauService {
             return Optional.empty();
         } catch (Exception e) {
             log.error("Error fetching bureau score for CPF {}: {}", cpf, e.getMessage(), e);
-            return Optional.empty(); // Ou lançar uma exceção customizada para indicar falha na comunicação
+            return Optional.empty();
+        }
+    }
+
+    private void savingBureauScoreInCache(String cpf, String cacheKey, BureauScore score) {
+        try {
+            bureauScoreRedisTemplate.opsForValue().set(cacheKey, score, CACHE_TTL_HOURS, TimeUnit.HOURS);
+            log.info("Bureau score for CPF {} saved to cache.", cpf);
+        } catch (Exception e) {
+            log.warn("Error saving bureau score to Redis cache (CPF: {}): {}", cpf, e.getMessage());
         }
     }
 

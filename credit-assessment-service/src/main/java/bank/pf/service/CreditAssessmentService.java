@@ -32,53 +32,74 @@ public class CreditAssessmentService {
 
     public void assessCredit(LoanApplicationReceivedEvent loanApplicationReceivedEvent) {
         log.info("Starting credit assessment for application ID: {}", loanApplicationReceivedEvent.applicationId());
+        var bureauScore = handleBureauScore(loanApplicationReceivedEvent);
+        if (bureauScore == null) return;
 
+        var antiFraudScore = handleAntiFraudScore(loanApplicationReceivedEvent);
+        if (antiFraudScore == null) return;
+
+        var creditAssessmentResult = buildCreditAssessmentResult(loanApplicationReceivedEvent, bureauScore);
+
+        assessmentRuleExecutor.executeChain(loanApplicationReceivedEvent, bureauScore, antiFraudScore, creditAssessmentResult);
+        handleRiskStrategies(loanApplicationReceivedEvent, creditAssessmentResult, bureauScore);
+
+        log.info("Final credit assessment for application {}: Status - {}, Justification - {}",
+                loanApplicationReceivedEvent.applicationId(), creditAssessmentResult.getStatus(), creditAssessmentResult.getJustification());
+
+        CreditAssessmentCompletedEvent completedEvent = CreditAssessmentCompletedEvent.valueOf(creditAssessmentResult, bureauScore, antiFraudScore);
+        creditAssessmentEventProducer.sendCreditAssessmentCompletedEvent(completedEvent);
+    }
+
+    private BureauScore handleBureauScore(LoanApplicationReceivedEvent loanApplicationReceivedEvent) {
         Optional<BureauScore> bureauScoreOpt = bureauService.getScore(loanApplicationReceivedEvent.cpf());
         if (bureauScoreOpt.isEmpty()) {
             log.warn("Could not retrieve bureau score for CPF: {}. Assessment cannot proceed.", loanApplicationReceivedEvent.cpf());
-            // Aqui você pode decidir publicar um evento de falha ou tratar de outra forma.
-            // Por simplicidade, vamos apenas logar e não prosseguir.
-            // Em um cenário real, poderia publicar um evento de "AVALIAÇÃO_FALHOU_BUREAU"
             CreditAssessmentResult failedResult = CreditAssessmentResult.builder()
                     .applicationId(loanApplicationReceivedEvent.applicationId())
                     .cpf(loanApplicationReceivedEvent.cpf())
-                    .status(AssessmentStatus.REJECTED) // Ou um status específico de falha
-                    .justification("Falha ao obter score do bureau.")
+                    .status(AssessmentStatus.FAILED)
+                    .justification("Failed to retrieve bureau score.")
                     .build();
-            // eventProducer.sendCreditAssessmentCompletedEvent(failedResult); // (Producer ainda não implementado)
+            var failedEvent = CreditAssessmentCompletedEvent.valueOf(failedResult);
+            creditAssessmentEventProducer.sendCreditAssessmentCompletedEvent(failedEvent);
             log.warn("Credit assessment for application {} rejected due to bureau score failure.", loanApplicationReceivedEvent.applicationId());
-            return;
+            return null;
         }
-        BureauScore bureauScore = bureauScoreOpt.get();
+        var bureauScore = bureauScoreOpt.get();
         log.info("Bureau score for application {}: {}", loanApplicationReceivedEvent.applicationId(), bureauScore);
+        return bureauScore;
+    }
 
-
+    private AntiFraudScore handleAntiFraudScore(LoanApplicationReceivedEvent loanApplicationReceivedEvent) {
         Optional<AntiFraudScore> antiFraudScoreOpt = antiFraudService.checkFraud(loanApplicationReceivedEvent);
         if (antiFraudScoreOpt.isEmpty()) {
             log.warn("Could not retrieve anti-fraud score for application ID: {}. Assessment cannot proceed.", loanApplicationReceivedEvent.applicationId());
-            // Similar ao bureau, tratar falha
             CreditAssessmentResult failedResult = CreditAssessmentResult.builder()
                     .applicationId(loanApplicationReceivedEvent.applicationId())
                     .cpf(loanApplicationReceivedEvent.cpf())
-                    .status(AssessmentStatus.REJECTED)
-                    .justification("Falha ao obter score antifraude.")
+                    .status(AssessmentStatus.FAILED)
+                    .justification("Failed to retrieve anti-fraud score.")
                     .build();
-            // eventProducer.sendCreditAssessmentCompletedEvent(failedResult);
+            var failedEvent = CreditAssessmentCompletedEvent.valueOf(failedResult);
+            creditAssessmentEventProducer.sendCreditAssessmentCompletedEvent(failedEvent);
             log.warn("Credit assessment for application {} rejected due to anti-fraud score failure.", loanApplicationReceivedEvent.applicationId());
-            return;
+            return null;
         }
-        AntiFraudScore antiFraudScore = antiFraudScoreOpt.get();
+        var antiFraudScore = antiFraudScoreOpt.get();
         log.info("Anti-fraud score for application {}: {}", loanApplicationReceivedEvent.applicationId(), antiFraudScore);
+        return antiFraudScore;
+    }
 
-        CreditAssessmentResult creditAssessmentResult = CreditAssessmentResult.builder()
+    private static CreditAssessmentResult buildCreditAssessmentResult(LoanApplicationReceivedEvent loanApplicationReceivedEvent, BureauScore bureauScore) {
+        return CreditAssessmentResult.builder()
                 .applicationId(loanApplicationReceivedEvent.applicationId())
                 .cpf(loanApplicationReceivedEvent.cpf())
                 .status(AssessmentStatus.APPROVED)
                 .finalScore(bureauScore.score())
                 .build();
+    }
 
-        assessmentRuleExecutor.executeChain(loanApplicationReceivedEvent, bureauScore, antiFraudScore, creditAssessmentResult);
-
+    private void handleRiskStrategies(LoanApplicationReceivedEvent loanApplicationReceivedEvent, CreditAssessmentResult creditAssessmentResult, BureauScore bureauScore) {
         if (creditAssessmentResult.getStatus() != AssessmentStatus.REJECTED) {
             CreditRiskStrategy selectedStrategy = riskStrategies.stream()
                     .filter(strategy -> strategy.appliesTo(bureauScore.score()))
@@ -87,26 +108,7 @@ public class CreditAssessmentService {
 
             selectedStrategy.assessRisk(loanApplicationReceivedEvent, bureauScore, creditAssessmentResult);
         }
-
-        log.info("Final credit assessment for application {}: Status - {}, Justification - {}",
-                loanApplicationReceivedEvent.applicationId(), creditAssessmentResult.getStatus(), creditAssessmentResult.getJustification());
-
-        CreditAssessmentCompletedEvent completedEvent = buildEvent(creditAssessmentResult, bureauScore, antiFraudScore);
-        creditAssessmentEventProducer.sendCreditAssessmentCompletedEvent(completedEvent);
     }
 
-    private CreditAssessmentCompletedEvent buildEvent(CreditAssessmentResult result, BureauScore bureauScore, AntiFraudScore antiFraudScore) {
-        return CreditAssessmentCompletedEvent.builder()
-                .eventId(java.util.UUID.randomUUID().toString())
-                .eventTimestamp(java.time.LocalDateTime.now())
-                .applicationId(result.getApplicationId())
-                .cpf(result.getCpf())
-                .finalAssessmentStatus(result.getStatus())
-                .justification(result.getJustification())
-                .creditScoreUsed(bureauScore.score())
-                .antiFraudScoreUsed(antiFraudScore.fraudScore())
-                .approvedLimit(result.getRecommendedLimit())
-                .interestRateApplied(result.getRecommendedInterestRate())
-                .build();
-    }
+
 }

@@ -5,5 +5,6 @@ public enum AssessmentStatus {
     APPROVED,
     REJECTED,
     PENDING_MANUAL_REVIEW,
-    ADJUSTED_CONDITIONS
+    ADJUSTED_CONDITIONS,
+    FAILED
 }
