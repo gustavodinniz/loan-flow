@@ -65,6 +65,12 @@ services:
     ports:
       - "9411:9411"
 
+  mailhog:
+    image: mailhog/mailhog:latest
+    ports:
+      - "1025:1025" # SMTP port
+      - "8025:8025" # Web UI port (para ver os emails)
+
 volumes:
   mongo_data:
   redis_data:

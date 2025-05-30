@@ -1,0 +1,18 @@
+Assunto: Sua Solicitação de Empréstimo Pessoal foi APROVADA!
+
+Prezado(a) Cliente portador(a) do CPF ${cpf},
+
+Temos o prazer de informar que sua solicitação de empréstimo pessoal (ID: ${applicationId}) foi APROVADA!
+
+Detalhes do seu empréstimo:
+Valor Aprovado: R$ ${approvedAmount}
+Taxa de Juros Anual: ${interestRate}%
+Número de Parcelas: ${numberOfInstallments}
+Valor da Parcela Mensal: R$ ${installmentAmount}
+
+Em anexo, você encontrará o contrato com todos os detalhes da sua operação. Por favor, leia-o atentamente.
+
+Se tiver qualquer dúvida, entre em contato conosco.
+
+Atenciosamente,
+Equipe CredFácil

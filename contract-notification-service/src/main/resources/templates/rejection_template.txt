@@ -1,0 +1,15 @@
+Assunto: Atualização sobre sua Solicitação de Empréstimo Pessoal
+
+Prezado(a) Cliente portador(a) do CPF ${cpf},
+
+Agradecemos o seu interesse em nossos serviços de empréstimo pessoal (ID: ${applicationId}).
+
+Após uma análise cuidadosa, informamos que, neste momento, não foi possível aprovar sua solicitação.
+Motivo: ${reason}
+
+Entendemos que esta não é a notícia que você esperava. Se desejar mais informações ou tiver alguma dúvida, por favor, entre em contato conosco.
+
+Você poderá realizar uma nova solicitação em 90 dias.
+
+Atenciosamente,
+Equipe CredFácil
