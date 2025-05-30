@@ -5,10 +5,14 @@ import jakarta.validation.constraints.*;
 import java.math.BigDecimal;
 import java.time.LocalDate;
 
-public record LoanApplicationRequest (
+public record LoanApplicationRequest(
         @NotBlank(message = "CPF é obrigatório")
         @Pattern(regexp = "^\\d{11}$", message = "CPF deve conter 11 dígitos numéricos")
         String cpf,
+
+        @Email
+        @NotBlank(message = "Email é obrigatório")
+        String email,
 
         @NotNull(message = "Data de nascimento é obrigatória")
         @Past(message = "Data de nascimento deve ser no passado")

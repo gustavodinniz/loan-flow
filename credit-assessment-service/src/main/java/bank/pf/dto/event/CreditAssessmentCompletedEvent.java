@@ -16,6 +16,7 @@ public record CreditAssessmentCompletedEvent(
         LocalDateTime eventTimestamp,
         String applicationId,
         String cpf,
+        String email,
         AssessmentStatus finalAssessmentStatus,
         String justification,
         Integer creditScoreUsed,
@@ -43,6 +44,7 @@ public record CreditAssessmentCompletedEvent(
                 .eventTimestamp(java.time.LocalDateTime.now())
                 .applicationId(result.getApplicationId())
                 .cpf(result.getCpf())
+                .email(result.getEmail())
                 .finalAssessmentStatus(result.getStatus())
                 .justification(result.getJustification())
                 .creditScoreUsed(bureauScore.score())

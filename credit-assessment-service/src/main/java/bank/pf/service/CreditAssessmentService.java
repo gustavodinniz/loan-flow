@@ -97,6 +97,7 @@ public class CreditAssessmentService {
         return CreditAssessmentResult.builder()
                 .applicationId(loanApplicationReceivedEvent.applicationId())
                 .cpf(loanApplicationReceivedEvent.cpf())
+                .email(loanApplicationReceivedEvent.email())
                 .status(AssessmentStatus.APPROVED)
                 .finalScore(bureauScore.score())
                 .build();

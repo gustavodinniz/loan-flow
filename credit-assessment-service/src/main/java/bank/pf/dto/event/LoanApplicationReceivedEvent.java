@@ -8,6 +8,7 @@ import java.time.LocalDate;
 public record LoanApplicationReceivedEvent(
         String applicationId,
         String cpf,
+        String email,
         LocalDate dateOfBirth,
         BigDecimal amountRequested,
         Integer numberOfInstallments,

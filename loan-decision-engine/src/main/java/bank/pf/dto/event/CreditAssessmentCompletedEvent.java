@@ -12,6 +12,7 @@ public record CreditAssessmentCompletedEvent(
         LocalDateTime eventTimestamp,
         String applicationId,
         String cpf,
+        String email,
         AssessmentStatus finalAssessmentStatus,
         String justification,
         Integer creditScoreUsed,

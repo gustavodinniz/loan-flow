@@ -82,6 +82,7 @@ public class LoanDecisionService {
                 .eventTimestamp(LocalDateTime.now())
                 .applicationId(completedEvent.applicationId())
                 .cpf(completedEvent.cpf())
+                .email(completedEvent.email())
                 .decision(loanDecision)
                 .reason(reason)
                 .terms(loanTerms)

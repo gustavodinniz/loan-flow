@@ -18,6 +18,7 @@ public class LoanDecisionMadeEvent {
     private LocalDateTime eventTimestamp;
     private String applicationId;
     private String cpf;
+    private String email;
     private LoanDecision decision;
     private String reason;
     private LoanTerms terms;

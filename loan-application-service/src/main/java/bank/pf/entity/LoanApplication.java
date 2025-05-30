@@ -29,6 +29,7 @@ public class LoanApplication {
 
     @Indexed
     private String cpf;
+    private String email;
     private LocalDate dateOfBirth;
     private BigDecimal amountRequested;
     private Integer numberOfInstallments;
@@ -54,6 +55,7 @@ public class LoanApplication {
         return LoanApplication.builder()
                 .id(UUID.randomUUID().toString())
                 .cpf(request.cpf())
+                .email(request.email())
                 .dateOfBirth(request.dateOfBirth())
                 .amountRequested(request.amountRequested())
                 .numberOfInstallments(request.numberOfInstallments())

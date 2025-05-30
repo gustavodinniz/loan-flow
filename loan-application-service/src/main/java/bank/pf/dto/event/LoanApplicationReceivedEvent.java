@@ -11,6 +11,7 @@ import java.time.LocalDate;
 public record LoanApplicationReceivedEvent(
         String applicationId,
         String cpf,
+        String email,
         LocalDate dateOfBirth,
         BigDecimal amountRequested,
         Integer numberOfInstallments,
@@ -22,6 +23,7 @@ public record LoanApplicationReceivedEvent(
         return LoanApplicationReceivedEvent.builder()
                 .applicationId(savedLoan.getId())
                 .cpf(savedLoan.getCpf())
+                .email(savedLoan.getEmail())
                 .dateOfBirth(savedLoan.getDateOfBirth())
                 .amountRequested(savedLoan.getAmountRequested())
                 .numberOfInstallments(savedLoan.getNumberOfInstallments())

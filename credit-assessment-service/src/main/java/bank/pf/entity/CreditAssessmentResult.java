@@ -16,6 +16,7 @@ public class CreditAssessmentResult {
 
     private String applicationId;
     private String cpf;
+    private String email;
     private AssessmentStatus status;
     private String justification;
     private int finalScore;
