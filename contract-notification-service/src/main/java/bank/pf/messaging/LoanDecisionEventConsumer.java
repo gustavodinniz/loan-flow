@@ -38,7 +38,7 @@ public class LoanDecisionEventConsumer {
     }
 
     @KafkaListener(
-            topics = "${kafka.topic.loan-decision-made}",
+            topics = "${app.kafka.topics.loan-decision-made}",
             groupId = "${spring.kafka.consumer.group-id}")
     public void handleLoanDecisionMadeEvent(LoanDecisionMadeEvent event) {
         log.info("Received LoanDecisionMadeEvent on topic. AppId {}, Decision: {}", event.getApplicationId(), event.getDecision());
