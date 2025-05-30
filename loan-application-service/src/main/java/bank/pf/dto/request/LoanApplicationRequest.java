@@ -20,7 +20,7 @@ public record LoanApplicationRequest(
 
         @NotNull(message = "Valor do empréstimo é obrigatório")
         @DecimalMin(value = "500.00", message = "Valor mínimo do empréstimo é R$ 500,00")
-        @DecimalMax(value = "100000.00", message = "Valor máximo do empréstimo é R$ 100.000,00")
+        @DecimalMax(value = "5000000.00", message = "Valor máximo do empréstimo é R$ 5.000.000,00")
         BigDecimal amountRequested,
 
         @NotNull(message = "Número de parcelas é obrigatório")
