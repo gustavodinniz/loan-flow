@@ -9,8 +9,6 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
-import org.springframework.security.core.annotation.AuthenticationPrincipal;
-import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.Map;
@@ -25,7 +23,7 @@ public class LoanApplicationController {
 
     @PostMapping
     public ResponseEntity<?> submitLoanApplication(
-            @Valid @RequestBody LoanApplicationRequest request, @AuthenticationPrincipal UserDetails userDetails) throws Exception {
+            @Valid @RequestBody LoanApplicationRequest request) throws Exception {
         log.info("Recebida solicitação de empréstimo para CPF: {}", request.cpf());
         log.info("Thread (controller for CPF {}): {}", request.cpf(), Thread.currentThread());
 
