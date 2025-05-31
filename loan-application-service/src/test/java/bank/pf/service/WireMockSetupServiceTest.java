@@ -10,6 +10,8 @@ import com.github.tomakehurst.wiremock.WireMockServer;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.ValueSource;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
@@ -50,40 +52,15 @@ class WireMockSetupServiceTest {
         verify(wireMockServer, times(6)).stubFor(any());
     }
 
-    @Test
-    void shouldSetupCpfValidationStubs() {
-        // Given
+
+    @ParameterizedTest
+    @ValueSource(strings = {"setupCpfValidationStubs", "setupAccountValidationStubs", "setupInternalRestrictionsStubs"})
+    void shouldSetupValidationStubs(String stubType) {
         ReflectionTestUtils.setField(wireMockSetupService, "baseUrl", "http://localhost:8090");
         ReflectionTestUtils.setField(wireMockSetupService, "restClient", RestClient.builder().baseUrl("http://localhost:8090").build());
 
         // When
-        ReflectionTestUtils.invokeMethod(wireMockSetupService, "setupCpfValidationStubs", wireMockServer);
-
-        // Then
-        verify(wireMockServer, times(2)).stubFor(any());
-    }
-
-    @Test
-    void shouldSetupAccountValidationStubs() {
-        // Given
-        ReflectionTestUtils.setField(wireMockSetupService, "baseUrl", "http://localhost:8090");
-        ReflectionTestUtils.setField(wireMockSetupService, "restClient", RestClient.builder().baseUrl("http://localhost:8090").build());
-
-        // When
-        ReflectionTestUtils.invokeMethod(wireMockSetupService, "setupAccountValidationStubs", wireMockServer);
-
-        // Then
-        verify(wireMockServer, times(2)).stubFor(any());
-    }
-
-    @Test
-    void shouldSetupInternalRestrictionsStubs() {
-        // Given
-        ReflectionTestUtils.setField(wireMockSetupService, "baseUrl", "http://localhost:8090");
-        ReflectionTestUtils.setField(wireMockSetupService, "restClient", RestClient.builder().baseUrl("http://localhost:8090").build());
-
-        // When
-        ReflectionTestUtils.invokeMethod(wireMockSetupService, "setupInternalRestrictionsStubs", wireMockServer);
+        ReflectionTestUtils.invokeMethod(wireMockSetupService, stubType, wireMockServer);
 
         // Then
         verify(wireMockServer, times(2)).stubFor(any());
