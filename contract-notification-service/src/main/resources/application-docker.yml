@@ -4,6 +4,12 @@ server:
 spring:
   kafka:
     bootstrap-servers: ${SPRING_KAFKA_BOOTSTRAP_SERVERS:kafka:9092}
+  mail:
+    host: mailhog
+    port: 1025
+    properties:
+      mail.smtp.auth: false
+      mail.smtp.starttls.enable: false
 
 management:
   zipkin:

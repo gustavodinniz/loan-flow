@@ -22,6 +22,7 @@ services:
       - mongo
       - kafka
       - zipkin
+      - wiremock-0
     networks:
       - loan-network
 
@@ -46,7 +47,7 @@ services:
     depends_on:
       - redis
       - kafka
-      - wiremock
+      - wiremock-1
       - zipkin
     networks:
       - loan-network
@@ -68,25 +69,6 @@ services:
     depends_on:
       - kafka
       - loan-application-app # Se for chamar a API dele
-      - zipkin
-    networks:
-      - loan-network
-
-  anti-fraud-app:
-    build:
-      context: ./anti-fraud-service
-    container_name: anti-fraud-container
-    # Nenhuma porta exposta ao host se for apenas consumidor Kafka, mas pode ter actuator na 8080 interna
-    environment:
-      SPRING_APPLICATION_NAME: anti-fraud-service
-      SPRING_PROFILES_ACTIVE: docker
-      SPRING_KAFKA_BOOTSTRAP_SERVERS: kafka:9092
-      MANAGEMENT_TRACING_SAMPLING_PROBABILITY: 1.0
-      MANAGEMENT_ZIPKIN_TRACING_ENDPOINT: http://zipkin:9411/api/v2/spans
-      MANAGEMENT_ENDPOINTS_WEB_EXPOSURE_INCLUDE: health,info,prometheus,loggers,metrics,beans,env,configprops
-      SERVER_PORT: 8080 # Para o Actuator funcionar via HTTP mesmo sem controllers
-    depends_on:
-      - kafka
       - zipkin
     networks:
       - loan-network
@@ -153,16 +135,25 @@ services:
       # KAFKA_CREATE_TOPICS: "LoanApplicationReceived:1:1,CreditAssessmentCompleted:1:1,LoanDecisionMade:1:1" # Alternativa
     networks: ["loan-network"]
 
-  wiremock:
+  wiremock-0:
     image: wiremock/wiremock:3.5.2-alpine
-    container_name: loan-wiremock
+    container_name: loan-wiremock-0
     ports:
       - "8089:8080" # WireMock interno na 8080, exposto na 8089 do host
     volumes:
       - ./wiremock/mappings:/home/wiremock/mappings
       # - ./wiremock/__files:/home/wiremock/__files # Se precisar servir arquivos estáticos
     command: --global-response-templating --verbose # Habilita templating e logs verbosos
-    networks: ["loan-network"]
+
+  wiremock-1:
+    image: wiremock/wiremock:3.5.2-alpine
+    container_name: loan-wiremock-1
+    ports:
+      - "8091:8080" # WireMock interno na 8080, exposto na 8089 do host
+    volumes:
+      - ./wiremock/mappings:/home/wiremock/mappings
+      # - ./wiremock/__files:/home/wiremock/__files # Se precisar servir arquivos estáticos
+    command: --global-response-templating --verbose # Habilita templating e logs verbosos
 
   prometheus:
     image: prom/prometheus:v2.50.1
@@ -181,7 +172,6 @@ services:
       - loan-application-app
       - credit-assessment-app
       - loan-decision-engine-app
-      - anti-fraud-app # Mesmo sem porta exposta, Prometheus tentará scrapear o Actuator
       - contract-notification-app
     networks: ["loan-network"]
 
@@ -203,6 +193,15 @@ services:
     container_name: loan-zipkin
     ports:
       - "9411:9411"
+    networks:
+      - loan-network
+
+  mailhog:
+    image: mailhog/mailhog:latest
+    container_name: loan-mailhog
+    ports:
+      - "1025:1025" # SMTP port
+      - "8025:8025" # Web UI port (para ver os emails)
     networks:
       - loan-network
 
