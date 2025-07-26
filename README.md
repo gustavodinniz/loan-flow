@@ -216,5 +216,3 @@ O sistema é composto pelos seguintes microsserviços:
     ```
 
 ---
-
-Este README.md fornece uma base sólida. Você pode adicionar seções sobre como testar a API, exemplos de requests, detalhes de configuração, etc., conforme o projeto evolui.
